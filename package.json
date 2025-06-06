@@ -1,0 +1,12 @@
+{
+  "name": "com.deadlysinss111.blendercontrolsforunity",
+  "version": "0.1.0",
+  "displayName": "BlenderControlsForUnity",
+  "description": "Allows user to use the basics Blender movements controls (g / r / s  +  x / y / z).",
+  "unity": "2021.3",
+  "author": {
+    "name": "Gautier Valentin",
+    "email": "gautiervalentin@gmail.com",
+    "url": "https://github.com/deadlysinss111/BlenderControlsForUnity"
+  }
+}
