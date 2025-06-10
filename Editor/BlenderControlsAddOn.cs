@@ -1,12 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting.FullSerializer;
-
-//using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
 //[InitializeOnLoad]
@@ -63,7 +59,6 @@ public class BlenderControlsAddOn : SceneView
 
         Event e = Event.current;
 
-        var pen = Pen.current;
         switch (e.type)
         {
             case EventType.KeyDown:
@@ -301,6 +296,12 @@ public class BlenderControlsAddOn : SceneView
                     Selection.activeGameObject.transform.position = _selectionStartPos;
                     Selection.activeGameObject.transform.localScale = _selectionStartScale;
                     Selection.activeGameObject.transform.rotation = _selectionStartRot;
+                }
+                else if(e.button == (int)MouseButton.LeftMouse)
+                {
+                    _selectionStartPos = Selection.activeGameObject.transform.position;
+                    _selectionStartScale = Selection.activeGameObject.transform.localScale;
+                    _selectionStartRot = Selection.activeGameObject.transform.rotation;
                 }
                 break;
         }

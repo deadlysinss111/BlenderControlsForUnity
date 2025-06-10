@@ -12,9 +12,9 @@ In that newly opened scene that won't show any gizmo, you are allowed to use the
 
 actions:
 
-g => move
-r => rotate (need to press an axis to rotate along)
-s => scale
+g => move\
+r => rotate (need to press an axis to rotate along)\
+s => scale\
 
 
 axis:
@@ -22,6 +22,6 @@ axis:
 Must be pressed after selecting an action to lock it to a single axis
 If pressed with shift, it will select the two other axis (doesn't work with the rotation)
 
-x => lock to x axis
-y => lock to y axis
-z => lock to z axis
+x => lock to x axis\
+y => lock to y axis\
+z => lock to z axis\
