@@ -19,14 +19,6 @@ public class BlenderControlsAddOn : SceneView
         //EditorApplication.update += UpdateMethod;
     }
 
-    //static void UpdateMethod()
-    //{
-    //    if (Input.anyKey)
-    //    {
-    //        Debug.Log("A key was pressed!");
-    //    }
-    //}
-
     enum Action
     {
         None = 0,
@@ -51,13 +43,30 @@ public class BlenderControlsAddOn : SceneView
     private static Vector3 _selectionStartScale;
     private static Quaternion _selectionStartRot;
 
+    private static GameObject _previousSelection = null;
+
     protected override void OnSceneGUI()
     {
         base.OnSceneGUI();
 
-        if (Selection.activeGameObject == null) return;
+        var currentSelection = Selection.activeGameObject;
+
+        if (currentSelection == null)
+        {
+            _previousSelection = null;
+            return;
+        }
 
         Event e = Event.current;
+
+        if ((e.modifiers & EventModifiers.Control) != 0 || (e.modifiers & EventModifiers.Command) != 0) return;
+
+        if(_previousSelection != currentSelection)
+        {
+            _previousSelection = currentSelection;
+            Debug.Log("changed target");
+            
+        }
 
         switch (e.type)
         {
@@ -70,16 +79,17 @@ public class BlenderControlsAddOn : SceneView
                     {
                         _action = Action.Move;
 
-                        _selectionStartPos = Selection.activeGameObject.transform.position;
-                        _selectionStartScale = Selection.activeGameObject.transform.localScale;
-                        _selectionStartRot = Selection.activeGameObject.transform.rotation;
+                        _selectionStartPos = currentSelection.transform.position;
+                        _selectionStartScale = currentSelection.transform.localScale;
+                        _selectionStartRot = currentSelection.transform.rotation;
 
-                        _frameStartTransform = Selection.activeGameObject.transform;
+                        _frameStartTransform = currentSelection.transform;
                     }
                     else
                     {
                         _action = Action.None;
                         _angleLocked = 0;
+                        ApplyUndoRecordPosition(currentSelection.transform);
                     }
                     break;
                 case KeyCode.R:
@@ -87,16 +97,17 @@ public class BlenderControlsAddOn : SceneView
                     {
                         _action = Action.Rotate;
 
-                        _selectionStartPos = Selection.activeGameObject.transform.position;
-                        _selectionStartScale = Selection.activeGameObject.transform.localScale;
-                        _selectionStartRot = Selection.activeGameObject.transform.rotation;
+                        _selectionStartPos = currentSelection.transform.position;
+                        _selectionStartScale = currentSelection.transform.localScale;
+                        _selectionStartRot = currentSelection.transform.rotation;
 
-                        _frameStartTransform = Selection.activeGameObject.transform;
+                        _frameStartTransform = currentSelection.transform;
                     }
                     else
                     {
                         _action = Action.None;
                         _angleLocked = 0;
+                         ApplyUndoRecordRotation(currentSelection.transform);
                     }
                     break;
                 case KeyCode.S:
@@ -104,25 +115,32 @@ public class BlenderControlsAddOn : SceneView
                     {
                         _action = Action.Scale;
 
-                        _selectionStartPos = Selection.activeGameObject.transform.position;
-                        _selectionStartScale = Selection.activeGameObject.transform.localScale;
-                        _selectionStartRot = Selection.activeGameObject.transform.rotation;
+                        _selectionStartPos = currentSelection.transform.position;
+                        _selectionStartScale = currentSelection.transform.localScale;
+                        _selectionStartRot = currentSelection.transform.rotation;
 
-                        _frameStartTransform = Selection.activeGameObject.transform;
+                        _frameStartTransform = currentSelection.transform;
                     }
                     else
                     {
                         _action = Action.None;
                         _angleLocked = 0;
+                        ApplyUndoRecordScale(currentSelection.transform);
                     }
                     break;
                 case KeyCode.X:
                     if ((_angleLocked & 1) == 0)
                     {
                         if ((e.modifiers & EventModifiers.Shift) != 0)
+                        {
+                            ResetValues(currentSelection.transform, AngeLock.X);
                             _angleLocked = 6;
+                        }
                         else
+                        {
+                            ResetValues(currentSelection.transform, AngeLock.Y | AngeLock.Z);
                             _angleLocked = 1;
+                        }
                     }
                     else
                     {
@@ -133,9 +151,15 @@ public class BlenderControlsAddOn : SceneView
                     if ((_angleLocked & 2) == 0)
                     {
                         if ((e.modifiers & EventModifiers.Shift) != 0)
+                        {
+                            ResetValues(currentSelection.transform, AngeLock.Y);
                             _angleLocked = 5;
+                        }
                         else
+                        {
+                            ResetValues(currentSelection.transform, AngeLock.X | AngeLock.Z);
                             _angleLocked = 2;
+                        }
                     }
                     else
                     {
@@ -146,13 +170,19 @@ public class BlenderControlsAddOn : SceneView
                     if ((_angleLocked & 4) == 0)
                     {
                         if ((e.modifiers & EventModifiers.Shift) != 0)
+                        {
+                            ResetValues(currentSelection.transform, AngeLock.Z);
                             _angleLocked = 3;
+                        }
                         else
-                            _angleLocked += 4;
+                        {
+                            ResetValues(currentSelection.transform, AngeLock.X | AngeLock.Y);
+                            _angleLocked = 4;
+                        }
                     }
                     else
                     {
-                        _angleLocked -= 4;
+                        _angleLocked = 0;
                     }
                     break;
                 }
@@ -160,7 +190,7 @@ public class BlenderControlsAddOn : SceneView
                 
 
             case EventType.MouseMove:
-                Transform selectedTransform = Selection.activeGameObject.transform;
+                Transform selectedTransform = currentSelection.transform;
                 Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
                 switch (_action)
                 {
@@ -289,22 +319,125 @@ public class BlenderControlsAddOn : SceneView
                 break;
 
             case EventType.MouseDown:
-                _action = Action.None;
-                _angleLocked = 0;
-                if(e.button == (int)MouseButton.RightMouse)
+                if(e.button == (int)MouseButton.RightMouse && _action != Action.None)
                 {
-                    Selection.activeGameObject.transform.position = _selectionStartPos;
-                    Selection.activeGameObject.transform.localScale = _selectionStartScale;
-                    Selection.activeGameObject.transform.rotation = _selectionStartRot;
+                    currentSelection.transform.position = _selectionStartPos;
+                    currentSelection.transform.localScale = _selectionStartScale;
+                    currentSelection.transform.rotation = _selectionStartRot;
+
+                    _action = Action.None;
+                    _angleLocked = 0;
                 }
-                else if(e.button == (int)MouseButton.LeftMouse)
+                else if(e.button == (int)MouseButton.LeftMouse && _action != Action.None)
                 {
-                    _selectionStartPos = Selection.activeGameObject.transform.position;
-                    _selectionStartScale = Selection.activeGameObject.transform.localScale;
-                    _selectionStartRot = Selection.activeGameObject.transform.rotation;
+                    switch (_action)
+                    {
+                        case Action.Move:
+                            ApplyUndoRecordPosition(currentSelection.transform);
+                            break;
+                        case Action.Rotate:
+                            ApplyUndoRecordRotation(currentSelection.transform);
+                            break;
+                        case Action.Scale:
+                            ApplyUndoRecordScale(currentSelection.transform);
+                            break;
+                        default:
+                            Debug.LogError("Tried to validate an action that is set to none");
+                            break;
+                    }
+                    _action = Action.None;
+                    _angleLocked = 0;
                 }
                 break;
         }
         Tools.current = Tool.None;
+    }
+
+    void ApplyUndoRecordPosition(Transform obj)
+    {
+        Vector3 pos = obj.position;
+        obj.position = _selectionStartPos;
+        Undo.RecordObject(obj, "Move Object");
+        obj.position = pos;
+    }
+
+    void ApplyUndoRecordRotation(Transform obj)
+    {
+        Quaternion rot = obj.rotation;
+        obj.rotation = _selectionStartRot;
+        Undo.RecordObject(obj, "Rotate Object");
+        obj.rotation = rot;
+    }
+
+    void ApplyUndoRecordScale(Transform obj)
+    {
+        Vector3 scale = obj.localScale;
+        obj.localScale = _selectionStartScale;
+        Undo.RecordObject(obj, "Scale Object");
+        obj.localScale = scale;
+    }
+
+    void ResetValues(Transform obj, AngeLock axisAsEnum)
+    {
+        int axis = (int)axisAsEnum;
+
+        // Z
+        if (axis / 4 > 0)
+        {
+            axis -= 4;
+
+            //position
+            Vector3 pos = obj.position;
+            pos.z = _selectionStartPos.z;
+            obj.position = pos;
+
+            //rotation
+            Vector3 euler = obj.rotation.eulerAngles;
+            euler.z = _selectionStartRot.eulerAngles.z;
+            obj.rotation = Quaternion.Euler(euler);
+
+            //scale
+            Vector3 scale = obj.localScale;
+            scale.z = _selectionStartScale.z;
+            obj.localScale = scale;
+        }
+        // Y
+        if (axis / 2 > 0)
+        {
+            axis -= 2;
+
+            //position
+            Vector3 pos = obj.position;
+            pos.y = _selectionStartPos.y;
+            obj.position = pos;
+
+            //rotation
+            Vector3 euler = obj.rotation.eulerAngles;
+            euler.y = _selectionStartRot.eulerAngles.y;
+            obj.rotation = Quaternion.Euler(euler);
+
+            //scale
+            Vector3 scale = obj.localScale;
+            scale.y = _selectionStartScale.y;
+            obj.localScale = scale;
+        }
+        // X
+        if (axis / 1 > 0)
+        {
+            //position
+            Vector3 pos = obj.position;
+            pos.x = _selectionStartPos.x;
+            obj.position = pos;
+
+            //rotation
+            Vector3 euler = obj.rotation.eulerAngles;
+            euler.x = _selectionStartRot.eulerAngles.x;
+            obj.rotation = Quaternion.Euler(euler);
+
+            //scale
+            Vector3 scale = obj.localScale;
+            scale.x = _selectionStartScale.x;
+            obj.localScale = scale;
+        }
     }
 }

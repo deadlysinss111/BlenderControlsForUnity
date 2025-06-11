@@ -1,6 +1,6 @@
 {
   "name": "com.deadlysinss111.blendercontrolsforunity",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "BlenderControlsForUnity",
   "description": "Allows user to use the basics Blender movements controls (g / r / s  +  x / y / z).",
   "unity": "2021.3",
